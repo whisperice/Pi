@@ -18,6 +18,3 @@ while True:
     print(volt)
 
 ser.close()
-
-
-
