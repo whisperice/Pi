@@ -1,14 +1,8 @@
 import serial
 from pylab import *
-import RPi.GPIO as GPIO
-
-LED = 21
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(LED, GPIO.OUT)
 
 ser = serial.Serial ("/dev/ttyS0")    #Open named port 
-ser.baudrate = 76800                     #Set baud rate to 76800
+ser.baudrate = 76800                    #Set baud rate to 76800
 volt=[0 for i in range(0,20)]
 curr=[0 for i in range(0,20)]
 time=[0 for i in range(0,20)]
@@ -23,13 +17,12 @@ RVH=1200000.0
 Mul=300.0
 totalEnergy=0
 groupIndex=0
-#threshold and pulseTime need to be proper value to make blinds separated
-threshold=100 #Led blind every 100J
-pulseEnergy=0 #record the energy make Led blink
-pulseTime=100 #max time (per whlie loop,about 1ms) for Led pulse
-cnt=0 #count for pulse time
-f = open('data.txt','w')
-fenergy = open('energy.txt','w')
+#voltOffset = 0.37750625*1000/(RVH+RVL)*RVL/600.0*32767.0
+#currOffset = 54.923183/Mul*1000/CTR*RI/600.0*32767.0
+voltOffset = 0
+currOffset = 0
+f = open('data_PS.txt','w')
+fenergy = open('energy_PS.txt','w')
 
 f.write('volt/V\t\t\tcurr/A\t\t\ttotaltime/us\n')
 fenergy.write('energy/J\t\ttotalEnergy/J\n')
@@ -45,14 +38,14 @@ while True:
 		for raw in data:
 			print(bin(raw))
 		'''
-		volt[i] = data[1]*2**8+ data[0]
+		volt[i] = data[1]*2**8+ data[0] + voltOffset
 		if volt[i] > 2**15:
 			volt[i] -= 2**16
 		#volt[i] = volt[i]/32767.0*600.0
 		volt[i] = (volt[i]/32767.0*600.0)/RVL*(RVH+RVL)/1000
 		#print('volt= '+str(volt[i])+' V')
 
-		curr[i] = data[3]*2**8 + data[2]
+		curr[i] = data[3]*2**8 + data[2] + currOffset
 		if curr[i] > 2**15:
 			curr[i] -= 2**16
 		#curr[i]= curr[i]/32767.0*600.0
@@ -73,40 +66,12 @@ while True:
 		power += volt[i]*curr[i]/Mul
 		period += time[i]
 
-        
-        #volt and curr plots
-	#for i in range(0,numPoint):
-        #        voltAxis.append(volt[i])
-        #        currAxis.append(curr[i])
-	#if len(voltAxis)>100:
-        #        del voltAxis[0:20]
-        #        del currAxis[0:20]
-        #        del timeAxis[0:20]
-	#plot(timeAxis,voltAxis)
-	#plot(timeAxis,currAxis)
-	#savefig('curve{}.png'.format(groupIndex))
-	#groupIndex += 1
-	#if groupIndex%20 == 0:
-        #        close('all')
-	#show(block=False)
-
-                
 	#electricity calculation
 	energy = power/numPoint*(period/10**6)
 	#print('energy in the last period ='+str(energy)+' J')
 	
 	totalEnergy += energy
 	#print('totalEnergy= '+str(totalEnergy)+' J')
-
-        #set Led
-	pulseEnergy += energy
-	cnt += 1
-	if pulseEnergy > threshold:
-                GPIO.output(LED, GPIO.HIGH)
-                pulseEnergy -= threshold
-                cnt=0
-	if cnt == pulseTime:
-                GPIO.output(LED, GPIO.LOW)                
 	
 	#record datas
 	for i in range(0,numPoint):
@@ -114,6 +79,8 @@ while True:
 	fenergy.write(str(energy)+'\t'+str(totalEnergy)+'\n')
 	f.flush
 	fenergy.flush
+	print(groupIndex)
+	groupIndex += 1
 
 f.close()
 fenergy.close()
