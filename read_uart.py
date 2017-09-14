@@ -16,6 +16,11 @@ RVL=2400.0
 RVH=1200000.0
 Mul=300.0
 totalEnergy=0
+f = open('data.txt','w')
+fenergy = open('energy.txt','w')
+
+f.write('volt\tcurr\ttotaltime')
+fenergy.write('energy\ttotalEnergy')
 
 while True:
 	power=0
@@ -48,9 +53,9 @@ while True:
 		print('time= '+str(time[i])+' us')
 
 		if len(timeAxis)==0:
-                        timeAxis.append(time[i])
+            timeAxis.append(time[i])
 		else:
-                        timeAxis.append(timeAxis[-1]+time[i])
+            timeAxis.append(timeAxis[-1]+time[i])
 		print('timeAxis= '+str(timeAxis[-1])+' us')
 		
 		#power += volt[i]*curr[i]
@@ -60,8 +65,8 @@ while True:
 
         #volt and curr plots
 	for i in range(0,numPoint):
-            voltAxis.append(volt[i])
-            currAxis.append(curr[i])
+        voltAxis.append(volt[i])
+        currAxis.append(curr[i])
 	plot(timeAxis,voltAxis)
 	plot(timeAxis,currAxis)
 	show(block=False)
@@ -71,7 +76,16 @@ while True:
 	
 	totalEnergy += energy
 	print('totalEnergy= '+str(totalEnergy)+' J')
+	
+	#record datas
+	for i in range(0,numPoint):
+		f.write(str(volt[i])+'\t'+str(curr[i])+'\t'+str(timeAxis[-(20-i)])+'\t')
+	fenergy.write(str(energy)+'\t\t'+str(totalEnergy))
+	f.flush
+	fenergy.flush
 
+f.close()
+fenergy.close()
 ser.close()
 
 
