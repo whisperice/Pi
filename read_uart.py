@@ -96,14 +96,14 @@ while True:
 	totalEnergy += energy
 	#print('totalEnergy= '+str(totalEnergy)+' J')
 
-        #set Led
+    #set Led
 	pulseEnergy += energy
 	cnt += 1
 	if pulseEnergy > threshold:
                 GPIO.output(LED, GPIO.HIGH)
                 pulseEnergy -= threshold
                 cnt=0
-        if cnt == pulseTime:
+    if cnt == pulseTime:
                 GPIO.output(LED, GPIO.LOW)                
 	
 	#record datas
