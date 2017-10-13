@@ -1,23 +1,59 @@
+#!/usr/bin/python
+#--------------------------------------
+#    ___  ___  _ ____
+#   / _ \/ _ \(_) __/__  __ __
+#  / , _/ ___/ /\ \/ _ \/ // /
+# /_/|_/_/  /_/___/ .__/\_, /
+#                /_/   /___/
+#
+#  lcd_16x2.py
+#  16x2 LCD Test Script
+#
+# Author : Matt Hawkins
+# Date   : 06/04/2015
+#
+# http://www.raspberrypi-spy.co.uk/
+#
+# Copyright 2015 Matt Hawkins
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#--------------------------------------
+
+# The wiring for the LCD is as follows:
+# 1 : GND
+# 2 : 5V
+# 3 : Contrast (0-5V)*
+# 4 : RS (Register Select)
+# 5 : R/W (Read Write)       - GROUND THIS PIN
+# 6 : Enable or Strobe
+# 7 : Data Bit 0             - NOT USED
+# 8 : Data Bit 1             - NOT USED
+# 9 : Data Bit 2             - NOT USED
+# 10: Data Bit 3             - NOT USED
+# 11: Data Bit 4
+# 12: Data Bit 5
+# 13: Data Bit 6
+# 14: Data Bit 7
+# 15: LCD Backlight +5V**
+# 16: LCD Backlight GND
+
 #import
 import RPi.GPIO as GPIO
 import time
-import serial
-
-ser = serial.Serial ("/dev/ttyS0")    #Open named port 
-ser.baudrate = 76800                     #Set baud rate to 76800
-volt=[0 for i in range(0,20)]
-curr=[0 for i in range(0,20)]
-time=[0 for i in range(0,20)]
-numPoint=20
-RI=7.5
-CTR=2500.0
-RVL=1600.0
-RVH=1200000.0
-Mul=300.0
-totalEnergy=0
-lastTime=0
-LCDPower=0
-LCDEnergy=0
+import random
+import math
 
 # Define GPIO to LCD mapping
 LCD_RS = 7
@@ -55,52 +91,33 @@ def main():
 
   # Initialise display
   lcd_init()
-  lcd_string("Rasbperry Pi",LCD_LINE_1)
-  lcd_string("16x2 LCD",LCD_LINE_2)
-   
+
   while True:
-  
-    # Send some test
-	power=0
-	energy=0
-	period=0
 
-	for i in range(0,numPoint):
-		data = ser.read(6)                  #Read 6 characters from serial
-		volt[i] = data[1]*2**8+ data[0]
-		if volt[i] > 2**15:
-			volt[i] -= 2**16
-		volt[i] = (volt[i]/32767.0*600.0)/RVL*(RVH+RVL)/1000
-		#print('volt= '+str(volt[i])+' V')
+    a_power = random.randint(8000000,9000000)/10000.0
+    lcd_string("Active Power:",LCD_LINE_1)
+    lcd_string((str(a_power) + "W"),LCD_LINE_2)
+    time.sleep(3) # 8 second delay
+    lcd_byte(0x01,LCD_CMD) # 000001 Clear display
 
-		curr[i] = data[3]*2**8 + data[2]
-		if curr[i] > 2**15:
-			curr[i] -= 2**16
-		curr[i]= (curr[i]/32767.0*600.0)/RI*CTR/1000
-		#print('curr= '+str(curr[i])+' A')
-		
-		time[i] = data[5]*2**8 + data[4]
-		#print('time= '+str(time[i])+' us')
-		
-		power += volt[i]*curr[i]
-		period += time[i]
+    r_power = random.randint(1000000,1500000)/10000.0
+    lcd_string("Reactive Power:",LCD_LINE_1)
+    lcd_string((str(r_power) + "VAR"),LCD_LINE_2)
+    time.sleep(3) # 8 second delay
+    lcd_byte(0x01,LCD_CMD) # 000001 Clear display
 
-	#electricity calculation
-	energy = power/numPoint*(period/10**6)
-	#print('energy in the last period ='+str(energy)+' J')
-	
-	totalEnergy += energy
-	#print('totalEnergy= '+str(totalEnergy)+' J')
-	
-	if time[19]-lastTime>=3000000:
-		lastTime=time[19]
-		LCDPower=round(power,3)
-		LCDEnergy=round(totalEnergy,3)
-		lcd_string('Power:{}W'.format(LCDPower),LCD_LINE_1)
-		lcd_string('Energy:{}J'.format(LCDEnergy),LCD_LINE_2)
+    power_f = round((a_power/(math.sqrt((a_power*a_power)+(r_power*r_power)))),4)
+    lcd_string("Power Factor:",LCD_LINE_1)
+    lcd_string(str(power_f),LCD_LINE_2)
+    time.sleep(3) # 8 second delay
+    lcd_byte(0x01,LCD_CMD) # 000001 Clear display
 
+    freq = random.randint(499000,501000)/10000.0
+    lcd_string("Frequency:",LCD_LINE_1)
+    lcd_string((str(freq) + "Hz"),LCD_LINE_2)
+    time.sleep(3) # 8 second delay
+    lcd_byte(0x01,LCD_CMD) # 000001 Clear display
 
-		
 def lcd_init():
   # Initialise display
   lcd_byte(0x33,LCD_CMD) # 110011 Initialise
@@ -163,6 +180,10 @@ def lcd_toggle_enable():
 
 def lcd_string(message,line):
   # Send string to display
+
+
+
+
   message = message.ljust(LCD_WIDTH," ")
 
   lcd_byte(line, LCD_CMD)
@@ -175,10 +196,10 @@ if __name__ == '__main__':
   try:
     main()
   except KeyboardInterrupt:
+    pass
     lcd_byte(0x01, LCD_CMD)
     lcd_string("Goodbye!",LCD_LINE_1)
-	GPIO.cleanup()
-    #pass
+    GPIO.cleanup()
   finally:
     lcd_byte(0x01, LCD_CMD)
     lcd_string("Goodbye!",LCD_LINE_1)
